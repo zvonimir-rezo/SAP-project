@@ -1,0 +1,1061 @@
+---
+title: "SAP projekt - Analiza poadataka o igračima NHL lige"
+author: "Zvonimir Petar Rezo, Dominik Ćurić i Ivan Sabolić"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+### Uvod
+
+Sportska industrija jedna je od najvećih industrija na svijetu sa procjenom vrijednosti od oko 600 milijardi dolara.
+Jedan od sportova koji pripadaaju sportskoj industriji te jedan od četiri glavna sporta u Sjedinjenim Američkim Državama je i hokej.Nacionalna Hokejaška Liga(NHL) najbolja je heokejaška liga na svijetu sa procjenom vrijednosti oko 18.4 milijarde dolara. NHL je osnovana 1917. godine i obuhvaća 24 američke momčadi i 7 kanadskih momčadi koje se svake sezone natječu za prestižni Stanley kup.
+
+### Podatkovni skup : NHL 2016-2017
+
+Podatkovni skup koji imamo na raspolaganju vezan nam je uz sezonu 2016-2017.Sadrži nam podatke za sve igrače koji su nastupili u toj sezoni te njihove karakteristike poput:visine,težine,pozicije na terenu,godišnje plaće itd.
+
+
+### Učitavanje podatkovnog skupa
+
+```{r message=FALSE, warning=FALSE}
+
+AllSits <- read.csv2(file.choose())
+fiveOnFive <- read.csv2(file.choose())
+fiveOnFour <- read.csv2(file.choose())
+fourOnFive <- read.csv2(file.choose())
+Goalies <- read.csv2(file.choose())
+fiveVsfive <- read.csv2(file.choose())
+
+```
+
+
+Prikat ćemo naše podatake i upoznati se s nekim karakteristikama naših podataka
+
+```{r message=FALSE, warning=FALSE}
+
+head(AllSits)
+head(fiveOnFive)
+head(fiveOnFour)
+head(fourOnFive)
+head(Goalies)
+head(fiveVsfive)
+
+```
+
+Pregled dimenzija naših podatkvnih okvira
+```{r message=FALSE, warning=FALSE}
+
+dim(AllSits)
+dim(fiveOnFive)
+dim(fiveOnFour)
+dim(fourOnFive)
+dim(Goalies)
+dim(fiveVsfive)
+
+```
+
+
+Pregled tipova podataka u našim podatkvnim okvirima
+```{r message=FALSE, warning=FALSE}
+
+sapply(AllSits, class)
+sapply(fiveOnFive, class)
+sapply(fiveOnFour, class)
+sapply(fourOnFive, class)
+sapply(Goalies, class)
+sapply(fiveVsfive, class)
+
+```
+
+### Plaće NHL igrača
+
+Nakon što smo se upoznali s podacima, možemo se prebaciti na analizu.Jedna od najvažnijih stavki svakog zaposlenog čovjeka, iznos novca kojeg dobije za svoj rad.Stoga ćemo se u ovom dijelu koncentrirati na zadatke vezane uz plaće.Stoga će naš prvi zadatak bit: Možemo li uočiti nekakvu distribuciju plaća NHL igrača?
+
+###ZADATAK 1
+###DISTRIBUCIJA PLAĆE
+```{r message=FALSE, warning=FALSE}
+require(stringr)
+### IZDVAJANJE U ZASEBNE ZABLICE PLAĆE IGRAČA
+### 3 TABLICE:IGRAČI+GOLMANI, IGRAČI I GOLMANI
+playersSalary <- as.data.frame(AllSits[, c("Last.Name", "First.Name","Hand","Position","Salary")]) 
+goaliesSalary <- as.data.frame(Goalies[, c("Last.Name", "First.Name", "Salary")])
+goaliesSalary$Position <- "GK"
+goaliesSalary$Hand <- NA
+
+salary <- rbind(playersSalary, goaliesSalary)
+
+salary$Salary <- str_remove(salary$Salary, "[$]")
+playersSalary$Salary <- str_remove(playersSalary$Salary, "[$]")
+goaliesSalary$Salary <- str_remove(goaliesSalary$Salary, "[$]")
+
+salary$Salary <- str_replace_all(salary$Salary, "[.]", "")
+playersSalary$Salary <- str_replace_all(playersSalary$Salary, "[.]", "")
+goaliesSalary$Salary <- str_replace_all(goaliesSalary$Salary, "[.]", "")
+
+salary$Salary <- str_replace_all(salary$Salary, "[,]", ".")
+playersSalary$Salary <- str_replace_all(playersSalary$Salary, "[,]", ".")
+goaliesSalary$Salary <- str_replace_all(goaliesSalary$Salary, "[,]", ".")
+
+salary$Salary <- as.numeric(salary$Salary)
+playersSalary$Salary <- as.numeric(playersSalary$Salary)
+goaliesSalary$Salary <- as.numeric(goaliesSalary$Salary)
+
+### Plaće podijeljene s milijun
+salary$Salary <- salary$Salary / 1e6
+playersSalary$Salary <- playersSalary$Salary / 1e6
+goaliesSalary$Salary <- goaliesSalary$Salary / 1e6
+
+### postotak redaka kojima je salary NA 
+sum(is.na(salary$Salary)) / nrow(salary)
+sum(is.na(playersSalary$Salary)) / nrow(playersSalary)
+sum(is.na(goaliesSalary$Salary)) / nrow(goaliesSalary)
+
+###  odbacujemo one retke u kojima je salary postavljena na NA zbog prethodno dobivenih malih postotaka
+salary_pure <- as.data.frame(salary[complete.cases(salary$Salary), ])
+playersSalary_pure <- as.data.frame(playersSalary[complete.cases(playersSalary$Salary), ])
+goaliesSalary_pure <- as.data.frame(goaliesSalary[complete.cases(goaliesSalary$Salary), ])
+
+```
+
+### Mjere centralne tendencije vezane uz plaću
+
+Izračunat ćemo neke standradne mjere poput max,min, srednje vrijednosti, medijana, kvartila 
+```{r message=FALSE, warning=FALSE}
+###max i min
+max(salary_pure$Salary) 
+min(salary_pure$Salary)
+
+max(playersSalary_pure$Salary) 
+min(playersSalary_pure$Salary)
+
+max(goaliesSalary_pure$Salary)
+min(goaliesSalary_pure$Salary)
+
+### Aritmeticka sredina
+mean(salary_pure$Salary)
+mean(playersSalary_pure$Salary)
+mean(goaliesSalary_pure$Salary)
+
+### Medijan
+median(salary_pure$Salary)
+median(playersSalary_pure$Salary)
+median(goaliesSalary_pure$Salary)
+
+### 1., 2. i 3. kvartil
+quantile(salary_pure$Salary, probs = c(0.25, 0.5, 0.75))
+quantile(playersSalary_pure$Salary, probs = c(0.25, 0.5, 0.75))
+quantile(goaliesSalary_pure$Salary, probs = c(0.25, 0.5, 0.75))
+
+
+
+```
+
+### Mjere raspršenosti
+
+Ovdje ćemo računati mjere raspršenosti plaća poput Ranga,IQRanga,varijance, standardne devijacije
+```{r message=FALSE, warning=FALSE}
+### Rang
+max(salary_pure$Salary) - min(salary_pure$Salary)
+max(playersSalary_pure$Salary) - min(playersSalary_pure$Salary)
+max(goaliesSalary_pure$Salary) - min(goaliesSalary_pure$Salary)
+
+### IQR - interkvartilni rang
+IQR(salary_pure$Salary)
+IQR(playersSalary_pure$Salary)
+IQR(goaliesSalary_pure$Salary)
+
+### Varijanca
+var(salary_pure$Salary)
+var(playersSalary_pure$Salary)
+var(goaliesSalary_pure$Salary)
+
+### Standardna devijacija
+sd(salary_pure$Salary)
+sd(playersSalary_pure$Salary)
+sd(goaliesSalary_pure$Salary)
+
+```
+
+
+### PRIKAZ plaća pomoću histograma
+
+Sada nakon što smo izračunali neke korisne mjere i još više se približili varijabli Salary,prikazat ćemo Salary pomoću histograma.Isto tako probat ćemo pronaći u prikazu oblik normalne distribucije plaća.
+
+```{r message=FALSE, warning=FALSE}
+histGoaliesSalary <- hist(goaliesSalary_pure$Salary,
+         breaks = seq(min(goaliesSalary_pure$Salary),max(goaliesSalary_pure$Salary)+1, 1),
+         main="Goalies salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="green"
+         )
+
+histPlayersSalary <- hist(playersSalary_pure$Salary,
+         breaks = seq(min(playersSalary_pure$Salary),max(playersSalary_pure$Salary)+1, 1),
+         main="Players salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="red",
+         )
+
+histSalary <- hist(salary_pure$Salary,
+         breaks = seq(min(salary_pure$Salary),max(salary_pure$Salary)+1, 1),
+         main="All Players salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="orange",
+         ) 
+
+```
+
+
+### Provjera log distribucije
+
+S obzirom da iz histograma ne možemo uočiti normalnu distribuciju posluži ćemo se log distribucijom te tako transformirati podatake sve u svrhu donekle prikaza normalne distribucije.  
+```{r}
+hist(log(goaliesSalary_pure$Salary),
+         breaks = 30,
+         main="Goalies salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="green"
+         )
+
+hist(log(playersSalary_pure$Salary),
+         breaks = 30,
+         main="Players salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="red"
+         )
+hist(log(salary_pure$Salary),
+         breaks = 30,
+         main="All Players salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="orange",
+         ) 
+
+```
+
+### qq plotovi
+Iz histograma se ne može baš zaključiti dolazi li uzorak iz normalne distribucije  te ćemo pokušati koristiti qq plotove.
+```{r}
+qqnorm(playersSalary_pure$Salary, pch = 1, frame = FALSE,main='Players salary') 
+qqline(playersSalary_pure$Salary, col = "steelblue", lwd = 2)
+
+
+qqnorm(goaliesSalary_pure$Salary, pch = 1, frame = FALSE,main='Goalies salary') 
+qqline(goaliesSalary_pure$Salary, col = "steelblue", lwd = 2)
+
+qqnorm(salary_pure$Salary, pch = 1, frame = FALSE,main='All Players salary')
+qqline(salary_pure$Salary, col = "steelblue", lwd = 2)
+```
+
+###ZAKLJUČAK  
+QQ plotovi su pokazali istu stvar, ne možemo zaključiti da uzorak dolazi iz normalne distribucije.
+No ako ponovno malo bolje pogledamo u histogram mogli bi uočiti da  uzorak dolazi iz eksponencijalne         distribucije.
+```{r}
+
+hist(salary_pure$Salary,
+         breaks = seq(min(salary_pure$Salary),max(salary_pure$Salary)+1, 1),
+         main="Goalies salary histogram",
+         xlab="Salary [millions$]",
+         ylab = "Frequency",
+         col="green",
+         )
+```
+
+###ZADATAK 2
+## Provjerit ćemo jesu li igrači na centarskoj poziciji plaćeni više od obrambenih igrača.
+
+Vrlo često u sportovima koje možemo podijeliti po mjestima na kojima igrači igraju na terenu(obrambeni,srednji i napadački dio) događa se da oni igrači koji su u napadu su većinom više plaćeni od drugi.Stoga će naš zadatak biti ispitati jesu li igači na centarskoj poziciji plaćeni više od obrambenih igrača.  
+
+```{r}
+
+att = playersSalary_pure[playersSalary_pure$Position == "C" | playersSalary_pure$Position == "C/LW"| playersSalary_pure$Position == "C/LW/C" | playersSalary_pure$Position == "C/LW/RW" | playersSalary_pure$Position =="C/RW" | playersSalary_pure$Position == "C/RW/LW",]
+def = playersSalary_pure[playersSalary_pure$Position == "D",] 
+
+```
+Probat cemo prvo usporediti srednje vrijednosti:
+
+```{r}
+mean(att$Salary)
+mean(def$Salary)
+```
+Srednje vrijednosti su jako blizu, što nas navodi da su plaće centralnih i obrambenih igrača slične.
+
+Iako iz histograma nismo mogli zaključiti da uzorak dolazi iz normalne distribucije, primjenom CGT možemo to zaključiti. Naime, promatramo stotine igrača što znači da je naš uzorak dovoljno velik,
+a i jasno je da su igrači međusobno nezavisni.
+
+Provjerit ćemo jesu li varijance jednake:
+
+```{r}
+var(att$Salary)
+var(def$Salary)
+```
+Razlika nije nezamjeriva. Provodimo var.test()
+
+```{r}
+var.test(att$Salary, def$Salary)
+```
+p vrijednost iznosi 0.00623. Na temelju dobivene p vrijednosti odbacujemo H0 pretpostavku da su varijance jednake.
+Nastavljamo s računom uzimajući u obzir da nam varijance nisu jednake.
+
+
+```{r}
+t.test(att$Salary, def$Salary, alt="greater", var.equal = FALSE)
+```
+
+###ZAKLJUČAK
+p-vrijednost iznosi 0.5916. To znači da ne odbacujemo pretpostavku da centralni igrači zarađuju jednako kao i obrambeni.
+
+Rezultati su pomalo iznenađujući, uzimajući u obzir da u većini ostalih mainstream sportova napadači i igrači sredine zarađuju najviše novaca.
+
+
+
+Većina timski sportova definira formacije koje se sastoje od pozicija na kojima pojedini igrači tima igraju te tako svojim sposobnostima doprinose timu.Isto tako ako uzmemo primjer pozicije bočnog obrambenog igrača iz nogometa.Često možemo vidjeti da lijevog bočnu poziciju igra igrač kojem je preferirana noga za šutiranje lopte lijeva, isti je slučaj i sa desnom bočnom pozicijom.Stoga je naš sljedeći zadatak ispitati:
+Jesu li pozicije igrača na terenu nezavisne od preferirane ruke s kojom igrač puca.
+
+###ZADATAK 3
+Postavljanje hipoteza:
+    H0 - pozicije su nezavisne
+    H1 - pozicije su zavisne 
+
+```{r, fig.cap="Klasifikacija pozicije igrača na terenu u hokeju", out.width = '100%'}
+knitr::include_graphics("hockey_positions.png")
+```    
+
+Pazimo na to koje su moguće vrijednosti naše varijable, a koje se stvarno pojavljuju u podatcima    
+```{r}
+levels(AllSits$Position)
+levels(AllSits$Hand)
+table(AllSits$Position)
+table(AllSits$Hand)
+
+```
+
+Kopirajmo najprije podatke u novi data.frame kako ne bi promijenili prave vrijednosti. 
+```{r}
+AllSits_copy = data.frame(AllSits)
+tracemem(AllSits)==tracemem(AllSits_copy)
+untracemem(AllSits_copy)
+untracemem(AllSits_copy)
+```
+ Pretpostavili smo da je D (defender) centralna pozicija
+```{r}
+require(tidyr)
+AllSits_copy['Position'] <- sapply(AllSits_copy['Position'], as.character)
+
+for (column_name in c("C","C/D","C/LW","C/LW/C","C/LW/RW","C/RW", "C/RW/LW", "D", "D/LW", "D/RW")){
+  AllSits_copy$Position[AllSits_copy$Position == column_name] = "Central_positions";
+}
+for (column_name in c("LW","LW/C", "LW/C/RW","LW/RW", "LW/RW/C")){
+  AllSits_copy$Position[AllSits_copy$Position == column_name] = "Left_positions";
+}
+for (column_name in c("RW", "RW/C", "RW/C/LW", "RW/LW", "RW/LW/C")){
+  AllSits_copy$Position[AllSits_copy$Position == column_name] = "Right_positions";
+}
+  
+tbl = table(AllSits_copy$Position)
+print(tbl)
+
+```
+ 
+```{r}
+tbl = table(AllSits_copy$Position,
+            AllSits_copy$Hand)
+tbl = addmargins(tbl)
+tbl
+```
+ Da pokažemo nezavisnost među razredima koristit ćemo chi^2 test koji je implementiran u funkciji `chisq.test()`. Da bi koristili taj test, 
+ moramo provjeriti je li očekivana vrijednost svakog od razreda barem 5
+```{r}
+for (col_names in colnames(tbl)){
+  for (row_names in rownames(tbl)){
+    if (!(row_names == 'Sum' | col_names == 'Sum') ){
+      cat('Očekivane frekvencije za razred ',col_names,'-',row_names,': ',(tbl[row_names,'Sum'] * tbl['Sum',col_names]) / tbl['Sum','Sum'],'\n')
+    }
+  }
+}
+```
+ Kao što sam ispis pokazuje očekivane vrijednosti su iznad 5 stoga je uvjet za chi^2 je ispunjen.
+```{r}
+###  Izvođenje hi kvadrat testa
+chisq.test(tbl,correct=F)
+
+```
+
+###ZAKLJUČAK
+
+S obzirom da je p vrijednost iznosi 2.2e-16, možemo odbaciti h0 u korist h1, odnosno možemo reći da su pozicije igrača na terenu i preferirana ruka zavisne.
+
+
+
+Jedna od najbitnijih stavki kod profesionalnih sportaša,ali i općenito jest fizička pripremljenost.Mnogo parametara se mjeri i ispituje da bi se odredila fizička spremnost igrača.Jedan od najvažnijih parametara koji se provjerava jest težina.Stoga će naš sljedeći zadatak biti ispitati: jesu li igrači iz neke države teži od igrača iz druge države?Konkretno u našem slučaju ispitivat ćemo težine ruskih i švedskih igrača.
+
+###ZADATAK 4
+###TJELESNA TEŽINA
+
+```{r warning=FALSE, message=FALSE}
+###  DVIJE TABLICE KOJE SADRŽE RUSKE I ŠVEDSKE IGRAČE
+russian_players <- AllSits[AllSits$Nat == "RUS", ]
+swedish_players <- AllSits[AllSits$Nat == "SWE", ]
+
+
+``` 
+
+```{r}
+cat('Prosječna visina kanadskih igrača iznosi ', mean(russian_players$Wt),'\n')
+cat('Prosječna visina španjolskih igrača iznosi ', mean(swedish_players$Wt), '\n')
+```
+
+```{r}
+boxplot(russian_players$Wt, swedish_players$Wt, 
+        names = c('Russian player heights','Swedish player heights'),
+        main='Boxplot of Russian and Swedish player heights[pounds]')
+```
+Postoje indikacije da su ruskih igrači teži od švedskih.
+
+Ovakvo ispitivanje možemo provesti t-testom.
+
+Kako bi mogli provesti test, moramo najprije provjeriti pretpostavke normalnosti i nezavisnosti uzorka. Obzirom da razmatramo dva uzoraka iz dvije različite zemlje, možemo pretpostaviti njihovu nezavisnost.Sljedeći korak je provjeriti normalnost podataka.
+
+Pokušat ćemo preko histograma pokazati normalnosti
+```{r}
+hist(russian_players$Wt, 
+     breaks= 10,
+     main='Histogram of weights of Russian players',
+     xlab='Weight in pounds')
+
+hist(swedish_players$Wt , 
+     breaks=10,
+     main='Histogram of weights of Swedish players',
+     xlab='Weight in pounds')
+```
+
+Iz histograma je možda teško vidljiva normalnost, pa ćemo probati s qqplot-ovima
+```{r}
+qqnorm(russian_players$Wt, pch = 1, frame = FALSE,main='Russian players')
+qqline(russian_players$Wt, col = "steelblue", lwd = 2)
+
+qqnorm(swedish_players$Wt, pch = 1, frame = FALSE,main='Swedish players')
+qqline(swedish_players$Wt, col = "steelblue", lwd = 2)
+```
+
+qqplotova daju bolju potvrdu da težine dolaze iz normalne distribucije stoga možemo pretpostavit normalnost te nastaviti sa t-testom.
+
+Da bi smo proveli t-test trebamo još izračunati i varijance populacija.
+```{r}
+var(russian_players$Wt)
+var(swedish_players$Wt)
+```
+Razlika između varijanci je dosta velika,ali ipak ćemo provesti testiranje.Pretpostavit ćemo da su varijance jednake i to će biti H0,dok će alternativna hipoteza biti da nisu jednake.
+
+Provest ćemo test nad varijancama kako bi provjerili naše pretpostavke.
+
+```{r}
+var.test(russian_players$Wt, swedish_players$Wt)
+```
+p-vrijednost od 0.001846 nam govori da možemo odbaciti hipotezu $H_0$ te da su varijance naša dva uzorka nejednaka.
+
+
+Provedimo sada t-test uz pretpostavku nejednakosti varijanci.
+
+```{r}
+t.test(russian_players$Wt, swedish_players$Wt, alt = "greater", var.equal = FALSE)
+```
+
+###ZAKLJUČAK
+
+Zbog jako male p-vrijednost koja iznosi 0.08984 ne možemo odbaciti $H_0$ hipotezu o jednakosti prosječnih vrijednosti u korist $H_1$, odnosno ne možemo reći da su ruski igrači u prosjeku značajno teži od švedskih igrača.
+
+
+
+S obzirom da se naše društvo svakog dana sve više mijenja i napreduje u svim aspektima, ista je stvar i sa sportovim.Grane sporta poput nogometa,košarke,hokeja sve se više šire na globalnoj razini i postaju dostupnije mnogo većem broju ljudi nego prije.U domaćim ligama sve je više stranih igrača, a iznimka nije niti NHL.Tijekom godina sve više europskih igrača nastupa u NHL,stoga je naš sljedeći zadataka:Koliki udio NHL igrača  čine igrači iz Europe,ako se pretpostavlja da oko 30 posto NHL igrača čine europski igrači?
+
+###ZADATAK 5
+### UDIO EUROPSKIH IGRAČA U NHL
+Za analizu koristit ćemo test o jednoj proporciji
+H0 - p0 = 0.3
+H1 - p0 < 0.3
+```{r}
+AllPlayers <- merge(AllSits,Goalies, all = TRUE)
+nationality <- table(AllPlayers$Nat)
+print(nationality)
+```
+Iz tablice vidimo da imamo 983 podataka, te da su svi igrači iz Europe ili Sjeverne Amerike
+```{r}
+n <- nrow(AllPlayers)
+k <- nrow(AllPlayers[!AllPlayers$Nat %in% c("CAN", "USA"), ])
+
+prop.test(x = k,n = n, p = 0.3 , alternative = "less")
+
+```
+
+###ZAKLJUČAK
+
+p-vrijednost iznosi 0.02404 možemo odbaciti $H_0$ hipotezu u korist $H_1$, odnosno možemo reći da manje od 30 posto svih NHL igrača čine igrači iz Europe.
+
+
+Isto kao što smo analizirali udio eruopski igrača u NHL,tako možemo povezati pozicije na kojima igraju igrači iz Sj.Amerike i Europe te probati odgovorit Je li udio obrambenih igrača u odnosu na ostale igrače u Sj.Americi veći od udjela obrambenih igrača u odnosu na ostale igrače iz Europe.
+
+###ZADATAK 6
+### POZICIJE I BODOVI
+ 
+```{r warning=FALSE, message=FALSE}
+require(dplyr)
+PointsPoistion <- AllSits[,c("First.Name", "Last.Name","GP","Position","G","A","PTS")]
+
+### UZIMAMO SAMO JEDNU POZICIJU U OBZIR
+PointsPoistion$OnePosition <- word(PointsPoistion$Position, start = 1, sep = fixed("/"))
+
+### PROVJERA VRIJEDNOSTI
+unique(PointsPoistion$OnePosition)
+
+### Tablice koje sadrže statistiku vezanu za poena,golove i asistencije 
+PointsStat <- PointsPoistion %>% group_by(OnePosition) %>% summarise(Pospts = sum(PTS))%>%unique() 
+GoalsStat <- PointsPoistion %>% group_by(OnePosition) %>% summarise(Pospts = sum(G))%>%unique()
+AsistsStat <- PointsPoistion %>% group_by(OnePosition) %>% summarise(Pospts = sum(A))%>%unique()
+
+```
+
+### PRIKAZ PODATAKA 
+```{r warning=FALSE, message=FALSE}
+print(PointsStat)
+print(GoalsStat)
+print(AsistsStat)
+
+```
+ 
+###  VIZUALIZACIJA PODATAKA 
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+per <- round(PointsStat$Pospts / sum(PointsStat$Pospts)*100, 2)
+lbls <- paste(PointsStat$OnePosition,per)
+lbls <- paste(lbls,"%", sep = "")
+pie(PointsStat$Pospts,labels = lbls, col=rainbow(length(lbls)),
+   main="Pie Chart of PointsStat")
+
+
+``` 
+
+###VIZUALIZACIJA PODATAKA
+```{r warning=FALSE, message=FALSE}
+per <- round(GoalsStat$Pospts / sum(GoalsStat$Pospts)*100, 2)
+lbls <- paste(GoalsStat$OnePosition,per)
+lbls <- paste(lbls,"%", sep = "")
+pie(GoalsStat$Pospts,labels = lbls, col=rainbow(length(lbls)),
+   main="Pie Chart of GoalsStat")
+
+per <- round(AsistsStat$Pospts / sum(AsistsStat$Pospts)*100, 2)
+lbls <- paste(AsistsStat$OnePosition,per)
+lbls <- paste(lbls,"%", sep = "")
+pie(AsistsStat$Pospts,labels = lbls, col=rainbow(length(lbls)),
+   main="Pie Chart of AsistsStat")
+
+
+``` 
+
+###ZAKLJUČAK
+
+Naša analiza  zadatak nam otkriva da najviše bodova osvaja centarska pozicija s udjelom od 34,53% svih ostvarenih bodova.Da smo prije analize pokušali dati odgovor na pitanje koja pozicija donosi najviše bodova, vrlo vjerovatno bi naš odgovor bio centarska pozicija i temeljio bi se na tome da igrači na centarskoj poziciji igraju bliže protivničkom golu te zbog toga imaju veću šansu za postizanjem pogotka ili asistencije.Stoga ova analiza nema nekog prevelikog smisla jer smo i sami bez detaljne analize mogli vrlo vjerovatno točno pretpostaviti odgovor na naše pitanje. 
+
+
+
+Prethodno smo analizirali koje pozicije ostvaruje PTS, i nismo se iznenadili kad je analiza pokazala da centarska pozicija ostvaruje najviše PTS.No sada možemo i igru uvesti malo geografije i podijeliti igrače iz NHL na one iz Sj.Amerike i Europe te pokušati odgovoriti na pitanje: Zabijaju li Američki igrači više od Europskih?  
+
+###ZADATAK 7
+```{r}
+
+histPlayersGoals <- hist(AllSits$G,
+         breaks = seq(0, max(AllSits$G) + 3, 3),
+         main="Players goals histogram",
+         xlab="Goals",
+         ylab = "Frequency",
+         col="red"
+         )
+```
+
+Plotanjem histograma ne možemo pokazati da uzorak broja golova dolazi iz normalne distribucije. 
+
+
+```{r}
+americans = AllSits[AllSits$Nat == "USA" | AllSits$Nat == "CAN",]
+europeans = AllSits[!(AllSits$Nat == "USA" | AllSits$Nat == "CAN"),]
+
+```
+Probat cemo prvo usporediti srednje vrijednosti:
+
+```{r}
+mean(americans$G)
+mean(europeans$G)
+```
+Pomalo iznenađujuće, ako gledamo srednje vrijednosti europljani zabijaju više golova od amerikanaca i kanađana.
+Provest ćemo test da pokažemo vrijedi li ta pretpstavka.
+
+Iako iz histograma nismo mogli zaključiti da uzorak dolazi iz normalne distribucije, primjenom CGT možemo to zaključiti. Naime, promatramo stotine igrača što znači da je naš uzorak dovoljno velik,
+a i jasno je da su igrači međusobno nezavisni.
+
+Provjerit ćemo jesu li varijance jednake:
+
+```{r}
+var(americans$G)
+var(europeans$G)
+```
+Razlika od 15ak je nezamjeriva. Provodimo var.test()
+
+```{r}
+var.test(americans$G, europeans$G)
+```
+p vrijednost iznosi 0.07014. Mi smo uzeli razinu značajnosti od 5%, te na temelju rezultata ovo testa
+ne odbacujemo pretpostavku da su varijance jednake.
+
+Stvorili su se uvjeti da provedemo t.test() (Mogli bi provesti i z test s obzirom na veličinu populaciju, ali z.test() nije dio običnog r paketa)
+
+```{r}
+t.test(europeans$G, americans$G, alt="greater", var.equal = TRUE)
+```
+
+###ZAKLJUČAK
+
+p-vrijednost iznosi 0.0122. To znači da odbacujemo pretpostavku da amerikanci i europljani zabijaju jednako golova, u korist da europljani zabijaju više.
+
+```{r}
+americansT <- americans[americans$TOI.GP > 5,]
+europeansT <- europeans[europeans$TOI.GP > 5,]
+mean(americansT$G)
+mean(europeansT$G)
+
+```
+
+###DODATAK ZAKLJUČKU
+
+Rezultati su bili malo iznenađujući, pa smo usporedili aritmetičku sredinu postignutih golova amerikanaca i europljana koji su igrali prosječno više od 5 minuta. Rezultati nagovještaju naš prijašnji zaključak.
+
+
+
+Osim dosta dobrih stvari koje profesionalni sport pruža sportašima.Postoje i neke loše stvari,a jedna od takvih stvari jesu i ozlijede.Igrači koji se ozlijede i prođu proces rehabilitacije,često nakon povratka na sportske terene ne igraju na razini prije ozlijede i minutaža im se smanji.Stoga će naš sljedeći zadataka biti:Provjeriti ovisnost između minuta provedenih na ledu i ozlijeda koje su pretprjeli pojedini igrači 
+
+
+###ZADATAK 8
+###UDIO OBRAMBENIH IGRAČA U AMERICI I EUROPI
+U ovom primjeru možemo se poslužiti testom o dvije proporcije.
+```{r pregled pozicija}
+table(americans$Position)
+table(europeans$Position)
+
+NumOfAmericans <- nrow(americans) 
+NumOfEuropeans <- nrow(europeans)
+americansDefenders <- nrow(americans[grepl("D",americans$Position), ])
+europeansDefenders <- nrow(europeans[grepl("D",europeans$Position), ])
+
+prop.test(x=c(americansDefenders, europeansDefenders), n = c(NumOfAmericans, NumOfEuropeans),
+          alternative = "greater")
+
+```
+
+###ZAKLJUČAK
+
+S obzirom da je p-vrijednost jednaka 0.2154, nemožemo odbaciti H0 u korist H1 i tvrditi da je broj braniča u odnosu na ostale igrače veći u Sj.Americi nego u Europi.
+
+
+ 
+Kao i u većini sportova,cilj svakog sporta je postići više golova/koševa/poena/... od svog protivnika i tako ga pobijediti.Također neki igrači koji igraju na određenim pozicijama postižu više golova/koševa/poena/...  od drugih igrača.Stoga je naš treći zadataka istražiti:
+Koje pozicije u hokeju ostvaruju više bodova(PTS = golovi + asistencije)u odigranim utakmicama te imali uopće smisla razmatrati pozicije i bodove.
+
+
+
+
+
+###ZADATAK 9
+#Provjera ovisnosti između minuta provedenih na terenu po utakmici i ozlijeđivanja
+Provesti ćemo test nezavinosti. Podatke ćemo prikazati kao kategorijske na način da minute provedene na terenu podijelimo u dvije kategorije jednake veličine (odnosno manje ili veće od medijana).
+Ozlijede dijelimo na one koje nisu imali ozlijedu te koji su imali jednu ili više ozlijeda.
+
+H0: ozlijeđivanje i minute provedene na terenu su nezavisne
+H1: ozlijeđivanje i minute provedene na terenu nisu nezavisne
+
+Koristimo kopiju naše prvotne tablice.
+
+```{r}
+AllSits_copy$Injuries[nchar(AllSits$Injuries) > 0] = "injury"
+AllSits_copy$Injuries[nchar(AllSits$Injuries) == 0] = "no_injury"
+```
+
+Svim igračima koji su bili ozlijeđeni retke smo postavili u 1, ostalima u 0.
+
+```{r}
+AllSits$Injuries
+AllSits_copy$Injuries
+```
+
+```{r}
+AllSits_copy$TOI.GP[AllSits$TOI.GP >= median(AllSits$TOI.GP)] = "big minutes"
+AllSits_copy$TOI.GP[AllSits$TOI.GP < median(AllSits$TOI.GP)] = "small minutes"
+```
+Igračima koji su u gornjoj polovici kod minutaže postavili smo minute u big minutes, ostalima u small minutes 
+
+
+```{r}
+table_inj_min = table(AllSits_copy$Injuries, AllSits_copy$TOI.GP)
+table_inj_min <- addmargins(table_inj_min)
+table_inj_min
+```
+Moramo provjeriti još jednu stvar prije provedbe samog chisq.test() testa: je li frekvencija svakog razreda veća ili jednaka 5.
+
+```{r}
+for (col_names in colnames(table_inj_min)){
+  for (row_names in rownames(table_inj_min)){
+    if (!(row_names == 'Sum' | col_names == 'Sum') ){
+      cat('Očekivane frekvencije za razred ',col_names,'-',row_names,': ',(table_inj_min[row_names,'Sum'] * table_inj_min['Sum',col_names]) / table_inj_min['Sum','Sum'],'\n')
+    }
+  }
+}
+```
+Kao što vidimo, uvjet je zadovoljen. Ostalo je provesti sami test.
+```{r}
+chisq.test(tbl)
+```
+
+###ZAKLJUČAK
+
+S obzirom na jako malu p vrijednost odbacujemo H0 u korist H1, odnosno pokazali smo da minute igranja i ozlijeđivanje nisu nezavisne varijable
+
+
+
+U školi/fakultetu često pišemo ispite iz kojih dobivamo različite ocjene.Na našu ocjenu utječe dosta faktora, od težine zadataka, gradiva koje pišemo, vremena utrošenog na savladavanje tog gradiva i slično.Istu stvar možmo primjeniti i na plaće igrača u našem podatkovom skupu.Dosta faktora može utjecati na plaću igrača, stoga će naš sljedeći zadataka biti:Ispitati vezu između plaće igrača s jedne strane i određenih varijabla s druge strane.U našem konkretnom slučaju uzet ćemo tri varijable koje bi mogle utjecati na plaću, a to su:PTS,minute i izbori u prvu,drugu ili treću najbolju šestorku lige.
+
+###ZADATAK 10
+###PLAĆE I PTS, PLAĆE I IZBOR U STARS TE PLAĆE I MINUTE IGRANJA
+Ovdje ćemo koristiti model linearne regresije
+
+```{r}
+require(stringr)
+playersSalary$PTS <- AllSits[ ,c("PTS")]
+playersSalary$TOI.GP <- AllSits[ ,c("TOI.GP")]
+playersSalary$X1st <- AllSits[ ,c("X1st")]
+playersSalary$X2nd <- AllSits[ ,c("X2nd")]
+playersSalary$X3rd <- AllSits[ ,c("X3rd")]
+playersSalary$PIM <- AllSits[ ,c("PIM")]
+playersSalary$SCA <- AllSits[ ,c("SCA")]
+
+playersSalary <- playersSalary[!is.na(playersSalary$Salary),]
+
+
+#umjesto NA stavljamo 0 jer da je dobar igrac ne bi bio NA
+playersSalary$X1st <- ifelse(is.na(playersSalary$X1st), 0, playersSalary$X1st)
+playersSalary$X2nd <- ifelse(is.na(playersSalary$X2nd), 0, playersSalary$X2nd)
+playersSalary$X3rd <- ifelse(is.na(playersSalary$X3rd), 0, playersSalary$X3rd)
+
+playersSalary$Chosen <- playersSalary$X1st * 3 + playersSalary$X2nd * 2 + playersSalary$X3rd
+
+
+plot(playersSalary$PTS, playersSalary$Salary)
+
+plot(playersSalary$SCA, playersSalary$Salary)
+
+plot(playersSalary$Chosen, playersSalary$Salary)
+
+plot(playersSalary$TOI.GP, playersSalary$Salary)
+
+
+```
+Na osnovu scatter plotova možemo pretpostaviti da varijable koje promatramo pozitivno utječu na izlaznu varijablu(plaću igrača). Kako bismo ispitali utjecaje varijabli na izlaznu varijablu, procijenjujemo model jednostavne regresije za svaku nezavisnu varijablu. Zavisna varijabla regresijskih modela bit će plaća(salary).
+
+### Linearna regresija
+```{r}
+#linearni model plaće igrača (Salary) i poena (golovi + asistencije = PTS)
+fit.PTS = lm(playersSalary$Salary~playersSalary$PTS,data=playersSalary)
+
+plot(playersSalary$PTS,playersSalary$Salary)+ #graficki prikaz podataka
+lines(playersSalary$PTS,fit.PTS$fitted.values,col='red') #graficki prikaz procijenjenih vrijednosti iz modela
+
+#linearni model plaće igrača (Salary) i odabira u tri najbolja igrača
+fit.chosen = lm(playersSalary$Salary~playersSalary$Chosen,data=playersSalary)
+
+plot(playersSalary$Chosen,playersSalary$Salary)+ #graficki prikaz podataka
+lines(playersSalary$Chosen,fit.chosen$fitted.values,col='red') #graficki prikaz procijenjenih vrijednosti iz modela
+
+#linearni model plaće igrača (Salary) i minuta po utakmici
+fit.minutes = lm(playersSalary$Salary~playersSalary$TOI.GP,data=playersSalary)
+
+plot(playersSalary$TOI.GP,playersSalary$Salary)+ #graficki prikaz podataka
+lines(playersSalary$TOI.GP,fit.minutes$fitted.values,col='red') #graficki prikaz procijenjenih vrijednosti iz modela
+
+#linearni model plaće igrača (Salary) i šansi za gol kreiranih dok je igrač bio u igri
+fit.SCA = lm(playersSalary$Salary~playersSalary$SCA,data=playersSalary)
+
+length(playersSalary$SCA)
+length(fit.SCA$fitted.values)
+plot(playersSalary$SCA,playersSalary$Salary)+ #graficki prikaz podataka
+lines(playersSalary$SCA[!is.na(playersSalary$SCA)],fit.SCA$fitted.values,col='red') #graficki prikaz procijenjenih vrijednosti iz modela
+
+```
+
+Iz nagiba pravaca linearne regresije možemo vidjeti da su naše pretpostavke o efektima promatranih varijabli bile opravdane. Kako bi dalje analizirali dobivene modele, moramo provjeriti da naše pretpostavke normalnosti reziduala i homogenosti varijance nisu pogrešne.
+
+```{r res}
+
+####  Bodovi
+selected.PTS = fit.PTS
+
+plot(selected.PTS$residuals) #gledajuci reziduale na ovaj nacin tesko je suditi o normalnosti
+
+#histogram je vrlo interpretativan
+hist((selected.PTS$residuals))
+hist(rstandard(selected.PTS))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.PTS))
+qqline(rstandard(selected.PTS))
+
+plot(selected.PTS$fitted.values,selected.PTS$residuals) #reziduale je dobro prikazati u ovisnosti o procjenama modela
+
+#KS test na normalnost 
+ks.test(rstandard(fit.PTS),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.PTS))
+```
+
+```{r res2}
+
+####  Bodovi
+selected.SCA = fit.SCA
+
+plot(selected.SCA$residuals) 
+
+#histogram je vrlo interpretativan
+hist((selected.SCA$residuals))
+hist(rstandard(selected.SCA))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.SCA))
+qqline(rstandard(selected.SCA))
+
+plot(selected.SCA$fitted.values,selected.SCA$residuals) #reziduale je dobro prikazati u ovisnosti o procjenama modela
+
+#KS test na normalnost 
+ks.test(rstandard(fit.SCA),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.SCA))
+```
+
+
+```{r}
+####  Izabranost u stars
+selected.chosen = fit.chosen
+
+plot(selected.chosen$residuals) #gledajuci reziduale na ovaj nacin tesko je suditi o normalnosti
+
+#histogram je vrlo interpretativan
+hist((selected.chosen$residuals))
+hist(rstandard(selected.chosen))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.chosen))
+qqline(rstandard(selected.chosen))
+
+plot(selected.chosen$fitted.values,selected.chosen$residuals) #reziduale je dobro prikazati u ovisnosti o procjenama modela
+
+#KS test na normalnost 
+ks.test(rstandard(fit.chosen),'pnorm')
+
+lillie.test(rstandard(fit.chosen))
+
+```
+
+```{r}
+####  Vrijeme igranja po utakmici
+selected.minutes = fit.minutes
+
+plot(selected.minutes$residuals) #gledajuci reziduale na ovaj nacin tesko je suditi o normalnosti
+
+#histogram je vrlo interpretativan
+hist((selected.minutes$residuals))
+hist(rstandard(selected.minutes))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.minutes))
+qqline(rstandard(selected.minutes))
+
+plot(selected.minutes$fitted.values,selected.minutes$residuals) #reziduale je dobro prikazati u ovisnosti o procjenama modela
+
+#KS test na normalnost 
+ks.test(rstandard(fit.minutes),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.minutes))
+
+```
+
+
+```{r korelacijski koeficijent bodovi}
+
+cor(playersSalary$PTS,playersSalary$Salary)
+
+cor.test(playersSalary$PTS,playersSalary$Salary)
+
+summary(fit.PTS)
+
+```
+
+```{r korelacijski koeficijent šanse}
+
+cor(playersSalary$SCA,playersSalary$Salary)
+
+cor.test(playersSalary$SCA,playersSalary$Salary)
+
+summary(fit.SCA)
+
+```
+
+
+```{r korelacijski koeficijent chosen}
+
+cor(playersSalary$Chosen,playersSalary$Salary)
+
+cor.test(playersSalary$Chosen,playersSalary$Salary)
+
+summary(fit.chosen)
+
+```
+
+```{r korelacijski koeficijent minute}
+
+cor(playersSalary$TOI.GP,playersSalary$Salary)
+
+cor.test(playersSalary$TOI.GP,playersSalary$Salary)
+
+summary(fit.minutes)
+
+```
+
+###ZAKLJUČAK 
+
+Došli smo do zaključka da varijable koje smo odabrali pozitivno utječu na visinu plaće, ali i da postoji određeni stupanj korelacije među njima, što bi nam dosta otežalo izvedbu višestruke regresije iz ovih varijabli.
+
+
+
+U gotovo svakom sportu biraju se najbolji od njaboljih.Za NHL vrijedi da svake godine se biraju 3 najbolje postave.Stoga ćemo probati uzeti u obzir neke varijable koje bi mogle ovisiti o izboru u najbolju postavu.
+
+###ZADATAK 11
+Opet koristimo model linearne regresije
+```{r}
+overall <- AllSits_copy[, c("First.Name", "Last.Name", "Ovrl")]
+overall <- overall[!is.na(overall$Ovrl), ]
+
+overall <-  merge(overall, playersSalary, by = c("Last.Name", "First.Name"), all.x=TRUE)
+
+overall <- overall[, (names(overall) %in% c("Last.Name", "First.Name", "Chosen", "Ovrl"))]
+overall <- overall[!is.na(overall$Chosen), ]
+
+
+plot(playersSalary$PTS, playersSalary$chosen)
+plot(playersSalary$PIM, playersSalary$chosen)
+plot(overall$Ovrl, overall$chosen)
+```
+
+```{r}
+
+fit.pts = lm(playersSalary$Chosen~playersSalary$PTS, data=playersSalary)
+fit.pim = lm(playersSalary$Chosen~playersSalary$PIM, data=playersSalary)
+fit.ovrl = lm(overall$Chosen~overall$Ovrl, data=overall)
+
+
+plot(playersSalary$PTS,  playersSalary$Chosen)
+lines(playersSalary$PTS, fit.pts$fitted.values, col='red')
+plot(playersSalary$PIM, playersSalary$Chosen)
+lines(playersSalary$PIM, fit.pim$fitted.values, col='red')
+plot(overall$Ovrl, overall$Chosen)
+lines(overall$Ovrl, fit.ovrl$fitted.values, col='red')
+```
+
+
+```{r}
+
+####  Bodovi
+selected.pts = fit.pts
+
+plot(selected.pts$residuals) 
+
+#histogram je vrlo interpretativan
+hist((selected.pts$residuals))
+hist(rstandard(selected.pts))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.pts))
+qqline(rstandard(selected.pts))
+
+plot(selected.pts$fitted.values,selected.pts$residuals) 
+
+#KS test na normalnost 
+ks.test(rstandard(fit.pts),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.pts))
+```
+
+```{r}
+
+####  PIM
+selected.pim = fit.pim
+
+plot(selected.pim$residuals) 
+
+#histogram je vrlo interpretativan
+hist((selected.pim$residuals))
+hist(rstandard(selected.pim))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.pim))
+qqline(rstandard(selected.pim))
+
+plot(selected.pim$fitted.values,selected.pim$residuals) #reziduale je dobro prikazati u ovisnosti o procjenama modela
+
+#KS test na normalnost 
+ks.test(rstandard(fit.pim),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.pim))
+```
+
+```{r}
+
+####  Overall
+selected.ovrl = fit.ovrl
+
+plot(selected.ovrl$residuals) 
+
+#histogram je vrlo interpretativan
+hist((selected.ovrl$residuals))
+hist(rstandard(selected.ovrl))
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.ovrl))
+qqline(rstandard(selected.ovrl))
+
+plot(selected.ovrl$fitted.values,selected.ovrl$residuals) 
+
+#KS test na normalnost 
+ks.test(rstandard(fit.ovrl),'pnorm')
+
+require(nortest)
+lillie.test(rstandard(fit.ovrl))
+```
+
+###ZAKLJUČAK
+
+Kao i očekivano, broj postignutih golova i asistencija te pozicija na draftu (niža pozicija je bolja pozicija) pozitivno utječu na broj koliko je puta igrač izabran u najbolji tim, te tu uočavamo uzročno posljedične veze. Kod PIM (minute isključenja) smo došli do zaključka da ne utječu previše na osvojene nagrade, što se može najbolje vidjeti iz scatter plota.
+
+
+----------------------ZAKLJUČAK RADA----------------------------
+Tijekom čitave ove analize pokušali smo pomoću situacija iz svakodnevice motivirati
+zanimljive probleme koje smo preslikali na naš skup podataka iz NHL,te smo prilikom
+rješavanja pojedinih problema izračunali neke korisne mjere,primjenili neke korisne modele
+i testove te isto tako napravili vizualizaciju odgovora na naše probleme.Da bi smo uspješno 
+savladali ove probleme poslužili smo se znanjem Statističke Analize Podataka kojeg smo osim
+upotrebe još dodatno utvrdili.
